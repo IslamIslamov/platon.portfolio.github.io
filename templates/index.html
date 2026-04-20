@@ -3,114 +3,155 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Вопросы</title>
+    <title>Тренажёр О/Ё</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-            background: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-            min-height: 100vh;
-        }
-
-        .timer {
-            font-size: 48px;
-            font-weight: bold;
-            margin-bottom: 30px;
-        }
-
-        .title {
-            background: #d1f5f2;
-            padding: 30px 60px;
-            font-size: 32px;
-            font-weight: 500;
-            border-radius: 8px;
-            margin-bottom: 40px;
-            color: #333;
-        }
-
-        .buttons {
-            display: flex;
-            gap: 30px;
-            margin-bottom: 30px;
-        }
-
-        .btn {
-            width: 120px;
-            height: 120px;
-            background: #cfe6ff;
-            border: 3px solid #5aa9e6;
-            border-radius: 12px;
-            font-size: 48px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn:hover {
-            background: #5aa9e6;
-            transform: scale(1.05);
-        }
-
-        .counter {
-            border: 3px solid #888;
-            border-radius: 12px;
-            padding: 20px 60px;
-            font-size: 36px;
-            font-weight: 500;
-        }
-    </style>
 </head>
 <body>
-    <div class="timer" id="timer">00:30</div>
-    <div class="title">ВОПРОСЫ</div>
-    <div class="buttons">
-        <button class="btn" onclick="checkAnswer('О')">О</button>
-        <button class="btn" onclick="checkAnswer('Е')">Е</button>
+    <div class="container">
+        <div class="header">
+            <div class="timer" id="timer">⏱️ 5</div>
+            <div class="progress">
+                <div class="bar" id="progressBar" style="width: 10%"></div>
+            </div>
+        </div>
+
+        <div class="title-card">
+            <h1>ВОПРОСЫ</h1>
+            <p>Правописание О и Ё после шипящих</p>
+        </div>
+
+        <div class="word-box" id="wordBox">
+            {{ word }}
+        </div>
+
+        <div class="buttons" id="buttonsArea">
+            <button class="btn" id="btnO" onclick="sendAnswer('О')">О</button>
+            <button class="btn" id="btnE" onclick="sendAnswer('Ё')">Ё</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <span class="label">ВОПРОС</span>
+                <span class="value" id="qCount">{{ current_num }} / {{ total }}</span>
+            </div>
+            <div class="stat">
+                <span class="label">СЧЁТ</span>
+                <span class="value score" id="scoreCount">{{ score }}</span>
+            </div>
+        </div>
     </div>
-    <div class="counter" id="counter">0 / 7</div>
-</body>
-<script>
-    let currentQuestion = 5;
-    const totalQuestions = 7;
-    let timeLeft = 30;
-    let timerInterval;
 
-    function startTimer() {
-        timerInterval = setInterval(() => {
-            timeLeft--;
-            const minutes = Math.floor(timeLeft / 60);
-            const seconds = timeLeft % 60;
-            document.getElementById('timer').textContent = 
-                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    <script>
+        let timeLeft = 5;
+        let timerInterval = null;
+        let isProcessing = false;
+
+        startTimer();
+
+        function startTimer() {
+            timeLeft = 5;
+            updateTimerDisplay();
             
-            if (timeLeft <= 0) {
-                clearInterval(timerInterval);
-                alert('Время вышло!');
-            }
-        }, 1000);
-    }
-
-    function checkAnswer(answer) {
-        currentQuestion++;
-        if (currentQuestion <= totalQuestions) {
-            document.getElementById('counter').textContent = `${currentQuestion} / ${totalQuestions}`;
-            timeLeft = 30; 
-        } else {
-            alert('Тест завершен!');
-            clearInterval(timerInterval);
+            if (timerInterval) clearInterval(timerInterval);
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    timeOut(); 
+                }
+            }, 1000);
         }
-    }
 
-    startTimer();
-</script>
+        function updateTimerDisplay() {
+            document.getElementById('timer').textContent = '⏱️ ' + timeLeft;
+            
+            if (timeLeft <= 2) {
+                document.getElementById('timer').style.color = '#d32f2f';
+            } else {
+                document.getElementById('timer').style.color = '#00897b';
+            }
+        }
+
+        function timeOut() {
+            if (isProcessing) return;
+            isProcessing = true;
+
+            document.getElementById('timer').textContent = '⏰ 0';
+            
+            fetch('/check', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({answer: ''}) 
+            })
+            .then(res => res.json())
+            .then(data => {
+                let correctBtn = data.real_answer === 'О' ? document.getElementById('btnO') : document.getElementById('btnE');
+                correctBtn.classList.add('correct');
+                
+                document.getElementById('scoreCount').innerText = data.score;
+                document.getElementById('qCount').innerText = data.current_num + ' / ' + data.total;
+                
+                setTimeout(() => {
+                    if (data.next_word) {
+                        document.getElementById('wordBox').innerText = data.next_word;
+                        document.getElementById('btnO').className = 'btn';
+                        document.getElementById('btnE').className = 'btn';
+                        isProcessing = false;
+                        startTimer(); 
+                    } else {
+                        endGame(data.score);
+                    }
+                }, 1500);
+            });
+        }
+
+        function sendAnswer(letter) {
+            if (isProcessing) return;
+            isProcessing = true;
+            clearInterval(timerInterval);
+
+            fetch('/check', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({answer: letter})
+            })
+            .then(res => res.json())
+            .then(data => {
+                let btnO = document.getElementById('btnO');
+                let btnE = document.getElementById('btnE');
+
+                if (data.correct) {
+                    (letter === 'О' ? btnO : btnE).classList.add('correct');
+                } else {
+                    (letter === 'О' ? btnO : btnE).classList.add('wrong');
+                    (data.real_answer === 'О' ? btnO : btnE).classList.add('correct');
+                }
+
+                document.getElementById('scoreCount').innerText = data.score;
+                document.getElementById('qCount').innerText = data.current_num + ' / ' + data.total;
+
+                setTimeout(() => {
+                    if (data.next_word) {
+                        document.getElementById('wordBox').innerText = data.next_word;
+                        btnO.className = 'btn';
+                        btnE.className = 'btn';
+                        isProcessing = false;
+                        startTimer(); 
+                    } else {
+                        endGame(data.score);
+                    }
+                }, 1500);
+            });
+        }
+
+        function endGame(score) {
+            document.getElementById('buttonsArea').innerHTML = 
+                '<div class="end-msg">🎉 Готово!<br>Твой счёт: ' + score + ' из {{ total }}</div>';
+            document.getElementById('wordBox').style.display = 'none';
+        }
+    </script>
+</body>
 </html>

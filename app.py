@@ -1,12 +1,10 @@
-from flask import Flask, jsonify, request, render_template, session
+from flask import Flask, render_template, request, session, jsonify
 import random
 import os
 
 app = Flask(__name__)
-# Секретный ключ нужен для работы сессий (хранения счета)
 app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key-change-me")
 
-# Данные для тренировки
 TASKS = [
     {"word": "Девч_нка", "answer": "О"},
     {"word": "Медвеж_нок", "answer": "О"},
@@ -20,79 +18,50 @@ TASKS = [
     {"word": "Реш_нный", "answer": "Ё"}
 ]
 
-# --- Маршруты для фронтенда ---
-
 @app.route('/')
 def index():
-    """Отдаем главную страницу"""
-    return render_template('index.html')
-
-# --- API Маршруты ---
-
-@app.route('/api/start', methods=['GET'])
-def start_game():
-    """Начать новую игру"""
-    session.clear() # Очищаем старую сессию
+    session.clear()
     session['score'] = 0
-    session['used_tasks'] = []
-    session['current_task'] = None
-    return jsonify({
-        'success': True,
-        'total_tasks': len(TASKS)
-    })
+    session['used'] = []
+    
+    first_task = random.choice(TASKS)
+    session['current'] = first_task
+    session['used'].append(first_task)
+    
+    return render_template('index.html', 
+                           word=first_task['word'], 
+                           current_num=1, 
+                           total=len(TASKS),
+                           score=0)
 
-@app.route('/api/task', methods=['GET'])
-def get_task():
-    """Получить следующее задание"""
-    used = session.get('used_tasks', [])
-    # Фильтруем задачи, которых еще не было
-    available = [t for t in TASKS if t not in used]
-    
-    if not available:
-        return jsonify({
-            'success': True,
-            'finished': True,
-            'score': session.get('score', 0),
-            'total': len(TASKS)
-        })
-    
-    task = random.choice(available)
-    session['current_task'] = task
-    
-    # Обновляем список использованных
-    if 'used_tasks' not in session:
-        session['used_tasks'] = []
-    session['used_tasks'].append(task)
-    
-    return jsonify({
-        'success': True,
-        'finished': False,
-        'task': task,
-        'progress': len(session['used_tasks']),
-        'total': len(TASKS),
-        'score': session.get('score', 0)
-    })
-
-@app.route('/api/answer', methods=['POST'])
+@app.route('/check', methods=['POST'])
 def check_answer():
-    """Проверить ответ"""
-    data = request.json
+    data = request.get_json(silent=True) or {}
     user_answer = data.get('answer')
-    current_task = session.get('current_task')
-    
+    current_task = session.get('current')
     if not current_task:
-        return jsonify({'success': False, 'error': 'No active task'}), 400
+        return jsonify({'error': 'No active task'}), 400
     
-    is_correct = user_answer == current_task['answer']
+    is_correct = (user_answer == current_task['answer'])
     
     if is_correct:
-        session['score'] = session.get('score', 0) + 1
+        session['score'] += 1
+    
+    next_task = None
+    available = [t for t in TASKS if t not in session['used']]
+    
+    if available:
+        next_task = random.choice(available)
+        session['current'] = next_task
+        session['used'].append(next_task)
     
     return jsonify({
-        'success': True,
         'correct': is_correct,
-        'correct_answer': current_task['answer'],
-        'score': session.get('score', 0)
+        'real_answer': current_task['answer'],
+        'score': session['score'],
+        'next_word': next_task['word'] if next_task else None,
+        'current_num': len(session['used']),
+        'total': len(TASKS)
     })
 
 if __name__ == '__main__':
