@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вопросы</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .timer {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 30px;
+        }
+
+        .title {
+            background: #d1f5f2;
+            padding: 30px 60px;
+            font-size: 32px;
+            font-weight: 500;
+            border-radius: 8px;
+            margin-bottom: 40px;
+            color: #333;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            width: 120px;
+            height: 120px;
+            background: #cfe6ff;
+            border: 3px solid #5aa9e6;
+            border-radius: 12px;
+            font-size: 48px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #5aa9e6;
+            transform: scale(1.05);
+        }
+
+        .counter {
+            border: 3px solid #888;
+            border-radius: 12px;
+            padding: 20px 60px;
+            font-size: 36px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="timer" id="timer">00:30</div>
+    <div class="title">ВОПРОСЫ</div>
+    <div class="buttons">
+        <button class="btn" onclick="checkAnswer('О')">О</button>
+        <button class="btn" onclick="checkAnswer('Е')">Е</button>
+    </div>
+    <div class="counter" id="counter">0 / 7</div>
+</body>
+<script>
+    let currentQuestion = 5;
+    const totalQuestions = 7;
+    let timeLeft = 30;
+    let timerInterval;
+
+    function startTimer() {
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.getElementById('timer').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                alert('Время вышло!');
+            }
+        }, 1000);
+    }
+
+    function checkAnswer(answer) {
+        currentQuestion++;
+        if (currentQuestion <= totalQuestions) {
+            document.getElementById('counter').textContent = `${currentQuestion} / ${totalQuestions}`;
+            timeLeft = 30; 
+        } else {
+            alert('Тест завершен!');
+            clearInterval(timerInterval);
+        }
+    }
+
+    startTimer();
+</script>
+</html>
