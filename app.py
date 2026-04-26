@@ -11,7 +11,7 @@ TASKS = [
     {"word": "Крюч_к", "answer": "О"},
     {"word": "Ж_лтого", "answer": "Ё"},
     {"word": "Ш_пот", "answer": "Ё"},
-    {"word": "Ут_нок", "answer": "О"},
+    {"word": "Парч_вый", "answer": "О"},
     {"word": "Мыш_нок", "answer": "О"},
     {"word": "Обожж_нный", "answer": "Ё"},
     {"word": "Сраж_нный", "answer": "Ё"},
